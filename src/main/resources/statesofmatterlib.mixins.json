@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "azura.somlib.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [
+      "ClientPlayNetworkMixin",
+		"ChunkDataSparseMaterialSincMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
