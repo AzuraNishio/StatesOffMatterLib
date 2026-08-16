@@ -13,6 +13,7 @@ public class SomLibShaders {
     public static void register(){
         //LazuliShaderDevTools.enableFastShaderReloading();
         gazShader = new LazuliShader(SomLib.id("gaz_base")).addDefaultUniforms().addSampler("Sampler0").addGlobalTimeUniform().register();
+        gazShader.doFastReloading = false;
         //test = new LazuliWarp(SomLib.id("lightmap_probe")).addTargets(LazuliWarpDefaultTargets.WORLD_TERRAIN).register();
         LazuliShaderRegistry.close();
     }

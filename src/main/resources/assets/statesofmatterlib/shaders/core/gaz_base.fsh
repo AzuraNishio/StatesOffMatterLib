@@ -22,5 +22,5 @@ void main() {
 
     color.rgb *= vertexColor.r * vertexColor.r * 1.6;
 
-    fragColor = color;
+    fragColor = color * ColorModulator;
 }
