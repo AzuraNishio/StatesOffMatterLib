@@ -15,5 +15,6 @@ public class SomLibClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		SparseMaterialRenderer.register();
 		SparseMatterSincClientNetwork.start();
+		SomLibShaders.register();
     }
 }

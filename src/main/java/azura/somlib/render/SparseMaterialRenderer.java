@@ -1,5 +1,7 @@
 package azura.somlib.render;
 
+import azura.somlib.SomLib;
+import azura.somlib.SomLibShaders;
 import azura.somlib.sparse_material.SparseMaterial;
 import azura.somlib.sparse_material.SparseMaterialState;
 import azura.somlib.storage.SomLibAttachments;
@@ -8,14 +10,19 @@ import azura.somlib.world.WorldSparseMatter;
 import azura.test_mod.materials.ModMaterials;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 import nishio.lazuli_lib.core.events.LazuliRenderEvents;
@@ -100,7 +107,7 @@ public class SparseMaterialRenderer {
 
                             if (storage == null) continue;
 
-                            renderChunk(storage, chunk, ctx);
+                            renderChunk(storage, chunk, ctx, world);
                         }
                     }
                 }
@@ -108,14 +115,15 @@ public class SparseMaterialRenderer {
         });
     }
 
-    public static void renderChunk(SparseMaterialChunkStorage storage, WorldChunk chunk, LazuliRenderContext ctx){
+    public static void renderChunk(SparseMaterialChunkStorage storage, WorldChunk chunk, LazuliRenderContext ctx, BlockRenderView world){
         //LazuliLog.Shaders.info("I'm surelly trying!");
         if (!storage.getStableStorage().isEmpty()){
             LazuliBufferBuilder bb = null;
             LapisRenderer.cleanupRenderSystem();
             LapisRenderer.enableCull();
             RenderSystem.enableBlend();
-            LapisRenderer.setShader(GameRenderer.getPositionColorProgram());
+            LapisRenderer.setShader(SomLibShaders.gazShader);
+            SomLibShaders.gazShader.updateAutomaticUniforms();
 
             Vector3f cameraVec = ctx.camera().getVerticalPlane().cross(ctx.camera().getHorizontalPlane()).normalize();
             BlockPos cameraPos = ctx.camera().getBlockPos();
@@ -123,9 +131,7 @@ public class SparseMaterialRenderer {
 
             ordered.sort(Comparator.comparingDouble(entry -> -entry.getKey().getSquaredDistance(cameraPos)));
 
-            float test = 0;
             for (var entry : ordered){
-                test += 0.01f;
                 //LazuliLog.Shaders.info("Rendering at " + entry.getKey().toShortString());
                 Map<SparseMaterial, SparseMaterialState> materials =
                         new HashMap<>(entry.getValue());
@@ -141,19 +147,30 @@ public class SparseMaterialRenderer {
 
                 LapisRenderer.setShaderTexture(0, state.getType().textureId());
 
-                float a = 1f;
-                //a = 0.9f;
-                double s = 0.1f;
+                float concentration = MathHelper.lerp(ctx.tickDelta(), state.getPreviousConcentration(), state.getConcentration());
+                float a = min(concentration * 0.05f, 1f);
+                double s = min(concentration * 0.5f, 0.5f);
+
+                int lightInt = WorldRenderer.getLightmapCoordinates(world, Blocks.SAND.getDefaultState(), entry.getKey());
+
+                int sky = (lightInt >> 20) & 0xF;
+                int block = (lightInt >> 4) & 0xF;
+
+                float sky01 = sky / 15.0f;
+                float block01 = block / 15.0f;
+
+                float light = block01 * 0.7f + (sky * 0.1f);
+                float lightUpper = light + (sky * 0.2f);
 
                 bb.setRenderSpace(new Transform3D(entry.getKey().toCenterPos(), new Quaternionf()));
-                LazuliVertex AAA = new LazuliVertex().pos(-s, -s, -s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex BAA = new LazuliVertex().pos( s, -s, -s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex ABA = new LazuliVertex().pos(-s,  s, -s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex BBA = new LazuliVertex().pos( s,  s, -s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex AAB = new LazuliVertex().pos(-s, -s,  s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex BAB = new LazuliVertex().pos( s, -s,  s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex BBB = new LazuliVertex().pos( s,  s,  s).color(0.7f,0.7f,0.7f,a);
-                LazuliVertex ABB = new LazuliVertex().pos(-s,  s,  s).color(0.7f,0.7f,0.7f,a);
+                LazuliVertex AAA = new LazuliVertex().pos(-s, -s, -s).color(light     ,0, 0, a);
+                LazuliVertex BAA = new LazuliVertex().pos( s, -s, -s).color(light     ,0, 0, a);
+                LazuliVertex ABA = new LazuliVertex().pos(-s,  s, -s).color(lightUpper,0, 0, a);
+                LazuliVertex BBA = new LazuliVertex().pos( s,  s, -s).color(lightUpper,0, 0, a);
+                LazuliVertex AAB = new LazuliVertex().pos(-s, -s,  s).color(light     ,0, 0, a);
+                LazuliVertex BAB = new LazuliVertex().pos( s, -s,  s).color(light     ,0, 0, a);
+                LazuliVertex BBB = new LazuliVertex().pos( s,  s,  s).color(lightUpper,0, 0, a);
+                LazuliVertex ABB = new LazuliVertex().pos(-s,  s,  s).color(lightUpper,0, 0, a);
 
                 // Z
                 bb.addVertex(AAA.uv(0, 1)).addVertex(ABA.uv(0, 0)).addVertex(BBA.uv(1, 0)).addVertex(BAA.uv(1, 1));
@@ -166,32 +183,6 @@ public class SparseMaterialRenderer {
                 // Y
                 bb.addVertex(AAA.uv(0, 0)).addVertex(AAB.uv(0, 1)).addVertex(ABB.uv(1, 1)).addVertex(ABA.uv(1, 0));
                 bb.addVertex(BAA.uv(0, 1)).addVertex(BBA.uv(0, 0)).addVertex(BBB.uv(1, 0)).addVertex(BAB.uv(1, 1));
-
-                a = min(state.getConcentration() * 0.25f, 1f);
-                s = 0.5f;
-
-                bb.setRenderSpace(new Transform3D(entry.getKey().toCenterPos(), new Quaternionf()));
-                AAA = new LazuliVertex().pos(-s, -s, -s).color(0.7f,0.7f,0.7f,a);
-                BAA = new LazuliVertex().pos( s, -s, -s).color(0.7f,0.7f,0.7f,a);
-                ABA = new LazuliVertex().pos(-s,  s, -s).color(0.7f,0.7f,0.7f,a);
-                BBA = new LazuliVertex().pos( s,  s, -s).color(0.7f,0.7f,0.7f,a);
-                AAB = new LazuliVertex().pos(-s, -s,  s).color(0.7f,0.7f,0.7f,a);
-                BAB = new LazuliVertex().pos( s, -s,  s).color(0.7f,0.7f,0.7f,a);
-                ABB = new LazuliVertex().pos(-s,  s,  s).color(0.7f,0.7f,0.7f,a);
-                BBB = new LazuliVertex().pos( s,  s,  s).color(0.7f,0.7f,0.7f,a);
-
-                // Z
-                bb.addVertex(AAA.uv(0, 1)).addVertex(ABA.uv(0, 0)).addVertex(BBA.uv(1, 0)).addVertex(BAA.uv(1, 1));
-                bb.addVertex(AAB.uv(1, 1)).addVertex(BAB.uv(0, 1)).addVertex(BBB.uv(0, 0)).addVertex(ABB.uv(1, 0));
-
-                // X
-                bb.addVertex(AAA.uv(1, 1)).addVertex(BAA.uv(0, 1)).addVertex(BAB.uv(0, 0)).addVertex(AAB.uv(1, 0));
-                bb.addVertex(ABA.uv(0, 1)).addVertex(ABB.uv(1, 1)).addVertex(BBB.uv(1, 0)).addVertex(BBA.uv(0, 0));
-
-                // Y
-                bb.addVertex(AAA.uv(0, 0)).addVertex(AAB.uv(0, 1)).addVertex(ABB.uv(1, 1)).addVertex(ABA.uv(1, 0));
-                bb.addVertex(BAA.uv(0, 1)).addVertex(BBA.uv(0, 0)).addVertex(BBB.uv(1, 0)).addVertex(BAB.uv(1, 1));
-
 
             }
             if (bb != null) {

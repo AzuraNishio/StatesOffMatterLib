@@ -11,6 +11,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import nishio.lazuli_lib.internals.LazuliLog;
 
 import java.util.*;
 
@@ -113,8 +114,17 @@ public class SparseMaterialChunkStorage {
         buf.writeNbt((NbtCompound) nbt);
     }
 
-    public void updateStable(){
-        this.STABLE_STORAGE = new HashMap<>(this.STORAGE);
+    public synchronized void updateStable() {
+        Map<BlockPos, Map<SparseMaterial, SparseMaterialState>> snapshot = new HashMap<>();
+
+        for (var entry : STORAGE.entrySet()) {
+            snapshot.put(
+                    entry.getKey(),
+                    new HashMap<>(entry.getValue())
+            );
+        }
+
+        STABLE_STORAGE = snapshot;
     }
 
     public void writeUpdatePacketAndClear(PacketByteBuf buf){
@@ -131,7 +141,7 @@ public class SparseMaterialChunkStorage {
         this.dirty.clear();
     }
 
-    public void applyUpdatePacket(PacketByteBuf buf){
+    public synchronized void applyUpdatePacket(PacketByteBuf buf){
         int count = buf.readInt();
         for (int i = 0; i < count; i++){
             DeltaEntry deltaEntry = DELTA_ENTRY_CODEC.parse(NbtOps.INSTANCE, buf.readNbt()).get().orThrow();
@@ -161,6 +171,8 @@ public class SparseMaterialChunkStorage {
 
     public SparseMaterialChunkStorage(List<StorageEntry> entries) {
        this.STORAGE = new HashMap<>();
+        LazuliLog.Shaders.info("Loading from entries!!!");
+
 
         for(StorageEntry e : entries){
             Map<SparseMaterial, SparseMaterialState> map = new HashMap<>();
@@ -185,14 +197,14 @@ public class SparseMaterialChunkStorage {
     }
 
 
-    public void add(BlockPos pos, SparseMaterialState value) {
+    public synchronized void add(BlockPos pos, SparseMaterialState value) {
         var posMap = STORAGE.computeIfAbsent(pos, p -> new HashMap<>());
         if (posMap.containsKey(value.getType())){
             if (!posMap.get(value.getType()).addTogether(value)){
                 posMap.remove(value.getType());
             };
         } else {
-            posMap.put(value.getType(), value);
+            if (value.getConcentration() > 0.2) posMap.put(value.getType(), value);
         }
         if (posMap.isEmpty()){
             STORAGE.remove(pos);
@@ -200,12 +212,12 @@ public class SparseMaterialChunkStorage {
         dirty.computeIfAbsent(pos, p -> new ArrayList<>()).add(new SingleSparseMaterialStateDelta(DeltaType.ADD, value));
     }
 
-    public void clear(BlockPos pos) {
+    public synchronized void clear(BlockPos pos) {
         dirty.computeIfAbsent(pos, p -> new ArrayList<>()).add(new SingleSparseMaterialStateDelta(DeltaType.CLEAR, new SparseMaterialState()));
 
     }
 
-    public void remove(BlockPos pos, SparseMaterial value) {
+    public synchronized void remove(BlockPos pos, SparseMaterial value) {
         Map<SparseMaterial, SparseMaterialState> map = STORAGE.get(pos);
         map.remove(value);
         if (map.isEmpty()){
@@ -221,6 +233,7 @@ public class SparseMaterialChunkStorage {
     }
 
     public List<StorageEntry> entries() {
+        LazuliLog.Shaders.info("Exporting to entries!!!");
         List<StorageEntry> output = new ArrayList<>();
 
         for (var entry : STORAGE.entrySet()) {

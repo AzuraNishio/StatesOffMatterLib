@@ -16,8 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"azura.somlib.SomLib",
-			"azura.test_mod.TestMod"
+			"azura.somlib.SomLib"
 		],
 		"client": [
 			"azura.somlib.SomLibClient"

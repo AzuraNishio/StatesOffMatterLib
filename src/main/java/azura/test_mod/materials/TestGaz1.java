@@ -1,6 +1,11 @@
 package azura.test_mod.materials;
 
 import azura.somlib.sparse_material.SparseMaterial;
+import azura.somlib.sparse_material.SparseMaterialState;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 
@@ -16,7 +21,12 @@ public class TestGaz1 extends SparseMaterial {
         if (v <= top + down + sideways + sideways + sideways + sideways) return Direction.WEST;
         return null;
     }
-
+    @Override
+    public void applyEffectOnEntity(Entity entity, SparseMaterialState state) {
+        if (entity instanceof LivingEntity e){
+            e.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 50 * (int) state.getConcentration()));
+        }
+    }
 
 
     @Override
