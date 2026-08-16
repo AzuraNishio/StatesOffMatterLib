@@ -11,10 +11,7 @@ public class ModMaterials {
     public static SparseMaterial fluid1 = registerSparseMaterial("test_fluid_1", new TestFluid1());
 
     public static void register(){
-
     }
-
-
 
     private static SparseMaterial registerSparseMaterial(String name, SparseMaterial material) {
         return Registry.register(SparseMaterialRegistry.MATERIAL_TYPES, TestMod.id(name), material);

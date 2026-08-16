@@ -8,6 +8,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
+import nishio.lazuli_lib.core.shaders.LazuliShader;
 
 public class SparseMaterial {
     public SparseMaterial(){}
@@ -17,8 +18,7 @@ public class SparseMaterial {
     public float diffusionDivision() {return 0.6f;}
     public float maxConcentration() {return 10f;}
 
-
-
+    public LazuliShader customShader() {return null;}
     public Direction getRandomMoveDirection(Random r) {return Direction.random(r);}
 
     public Identifier textureId() {

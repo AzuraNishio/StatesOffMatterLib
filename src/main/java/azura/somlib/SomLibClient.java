@@ -1,6 +1,7 @@
 package azura.somlib;
 
 import azura.somlib.networking.SparseMatterSincClientNetwork;
+import azura.somlib.render.SomLibShaders;
 import azura.somlib.render.SparseMaterialRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;

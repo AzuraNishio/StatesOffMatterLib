@@ -1,33 +1,23 @@
 package azura.somlib.render;
 
-import azura.somlib.SomLib;
-import azura.somlib.SomLibShaders;
 import azura.somlib.sparse_material.SparseMaterial;
 import azura.somlib.sparse_material.SparseMaterialState;
 import azura.somlib.storage.SomLibAttachments;
 import azura.somlib.storage.SparseMaterialChunkStorage;
-import azura.somlib.world.WorldSparseMatter;
-import azura.test_mod.materials.ModMaterials;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockRenderView;
-import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 import nishio.lazuli_lib.core.events.LazuliRenderEvents;
 import nishio.lazuli_lib.core.world_rendering.*;
-import nishio.lazuli_lib.internals.LazuliLog;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -130,7 +120,7 @@ public class SparseMaterialRenderer {
             List<Map.Entry<BlockPos, Map<SparseMaterial, SparseMaterialState>>> ordered = new ArrayList<>(storage.getStableStorage().entrySet());
 
             ordered.sort(Comparator.comparingDouble(entry -> -entry.getKey().getSquaredDistance(cameraPos)));
-
+            boolean isUsingCustom = false;
             for (var entry : ordered){
                 //LazuliLog.Shaders.info("Rendering at " + entry.getKey().toShortString());
                 Map<SparseMaterial, SparseMaterialState> materials =
@@ -145,6 +135,14 @@ public class SparseMaterialRenderer {
                 SparseMaterialState state =
                         materials.values().iterator().next();
 
+                if (state.getType().customShader() != null){
+                    LapisRenderer.setShader(state.getType().customShader());
+                    isUsingCustom = true;
+                } else if(isUsingCustom){
+                    isUsingCustom = false;
+                    LapisRenderer.setShader(SomLibShaders.gazShader);
+
+                }
                 LapisRenderer.setShaderTexture(0, state.getType().textureId());
 
                 float concentration = MathHelper.lerp(ctx.tickDelta(), state.getPreviousConcentration(), state.getConcentration());
