@@ -171,7 +171,6 @@ public class SparseMaterialChunkStorage {
 
     public SparseMaterialChunkStorage(List<StorageEntry> entries) {
        this.STORAGE = new HashMap<>();
-        LazuliLog.Shaders.info("Loading from entries!!!");
 
 
         for(StorageEntry e : entries){
@@ -233,7 +232,6 @@ public class SparseMaterialChunkStorage {
     }
 
     public List<StorageEntry> entries() {
-        LazuliLog.Shaders.info("Exporting to entries!!!");
         List<StorageEntry> output = new ArrayList<>();
 
         for (var entry : STORAGE.entrySet()) {
