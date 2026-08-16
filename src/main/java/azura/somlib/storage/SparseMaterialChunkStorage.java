@@ -175,7 +175,9 @@ public class SparseMaterialChunkStorage {
 
         for(StorageEntry e : entries){
             Map<SparseMaterial, SparseMaterialState> map = new HashMap<>();
-            e.materials().forEach(s -> map.put(s.getType(), s));
+            e.materials().forEach(s -> {
+                if (s.getType() != null) map.put(s.getType(), s);
+            });
             if (!map.isEmpty()) {
                 STORAGE.put(e.pos(), map);
             }
